@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Unpacking and Running Code at Runtime - Yet Another Tech Blog!!</title><meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta property="og:title" content="Unpacking and Running Code at Runtime" />
+<meta property="og:description" content="The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use how ever this chunk is not executable.
+as you can see in the above image ." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://vtewari.com/posts/unpacking-and-running-code-at-runtime/" />
+<meta property="article:published_time" content="2019-09-29T13:44:23+05:30" />
+<meta property="article:modified_time" content="2019-09-29T13:44:23+05:30" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Unpacking and Running Code at Runtime"/>
+<meta name="twitter:description" content="The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use how ever this chunk is not executable.
+as you can see in the above image ."/>
+<link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,300italic,400italic|Raleway:500,100,300" rel="stylesheet">
+
+	<link rel="stylesheet" type="text/css" media="screen" href="https://vtewari.com/css/normalize.css" />
+	<link rel="stylesheet" type="text/css" media="screen" href="https://vtewari.com/css/main.css" /><script src="https://vtewari.com/js/feather.min.js"></script><script src="https://vtewari.com/js/main.js"></script>
+</head>
+
+<body>
+	<div class="container wrapper post">
+		<div class="header">
+	<h1 class="site-title">Yet Another Tech Blog!!</h1>
+	<div class="site-description"><nav class="nav social">
+			<ul class="flat"><a href="https://github.com/0xVarun" title="Github"><i data-feather="github"></i></a><a href="https://twitter.com/0xVarun" title="Twitter"><i data-feather="twitter"></i></a></ul>
+		</nav>
+	</div>
+
+	<nav class="nav">
+		<ul class="flat">
+			
+		</ul>
+	</nav>
+</div>
+
+
+		<div class="post-header">
+			<h1 class="title">Unpacking and Running Code at Runtime</h1>
+			<div class="meta">Posted at &mdash; Sep 29, 2019</div>
+		</div>
+
+		<div class="markdown">
+			
+
+<p>The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use how ever this chunk is not executable.</p>
+
+<p><img src="/heap_no_x.png" alt="Non Executable Heap" /></p>
+
+<p>as you can see in the above image <code>..... rw- [heap]</code> indicating that all the pages in the heap are non executable</p>
+
+<p>This is where mmap comes into the picture. This function is defined in the <code>&lt;linux/mman.h&gt;</code> header file. This is also how a lot of virtual machines work. Converting source code into its understandable bytecode and then to platform specific assembler code mapped into a memory segment provided by mmap which is marked as executable.</p>
+
+<p><img src="/mmap_rwx.png" alt="Executable Memory Pages" /></p>
+
+<p>The permissions highlighted in red shows the mmaped page. The image below shows the <code>mmap</code> address in the register <code>rax</code> after the <code>call 0x401030 &lt;mmap@plt&gt;</code>.</p>
+
+<p><img src="/mmap_addr.png" alt="MMAP Memory Address" /></p>
+
+<p>So how does this work?? For this demonstration I&rsquo;ll be using a fairly simple assembly that basically adds 0x4 to the value passed and returns it.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-assembly" data-lang="assembly">.intel_syntax noprefix
+
+.global _start
+
+_start:
+	mov rax, rdi	# rdi holds the first parameter passed to the function
+	add rax, 0x4	# add 0x4 to Value from rdi
+	ret				# return (rdi + 4) value in rax</code></pre></div>
+<p>We dont really care about it being able to run as a binary when compiled rather we want to get the opcodes for this assembly, We need to compile this with (g)as and and dump opcodes with objdump</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ as -o shc.o shc.S
+$ ld -o shc shc.o <span style="color:#008000"># Optional Step since even if you link it, running it caues seg fault</span>
+$ objdump -d -Mintel shc
+
+shc:     file format elf64-x86-64
+
+Disassembly of section .text:
+
+0000000000401000 &lt;_start&gt;:
+  401000:	48 89 f8             	mov    rax,rdi
+  401003:	48 83 c0 04          	add    rax,0x4
+  401007:	c3                   	ret    </code></pre></div>
+<p>alternatively you could also use you could also use <code>rasm2</code> for this.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ rasm2 -a x86 -b 64  <span style="color:#a31515">&#39;mov rax, rdi; add rax, 0x4; ret&#39;</span>
+4889f84883c004c3</code></pre></div>
+<p>The opcodes now can be loaded into memroy and we can jump to that memory location and start executing but for that we first need to setup mmap</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C" data-lang="C"><span style="color:#2b91af">unsigned</span> <span style="color:#2b91af">char</span> shc[] = {
+    0x48, 0x89, 0xf8,
+    0x48, 0x83, 0xc0, 0x04,
+    0xc3 
+};
+
+<span style="color:#2b91af">void</span> *ptr = mmap(
+    <span style="color:#008000">// Optional Address Preference
+</span><span style="color:#008000"></span>    NULL, 
+
+    <span style="color:#008000">// Size of Memory Map requried
+</span><span style="color:#008000"></span>    <span style="color:#00f">sizeof</span>(shc), 
+    
+    <span style="color:#008000">// RWX Protections on the memory map
+</span><span style="color:#008000"></span>    PROT_READ | PROT_WRITE | PROT_EXEC,
+    
+    <span style="color:#008000">// Flags to indicate what processes can see this mmap. 
+</span><span style="color:#008000"></span>    <span style="color:#008000">// MAP_PRIVATE creates a private CoW mapping (from the man page)
+</span><span style="color:#008000"></span>    <span style="color:#008000">// MAP_ANONYMOUS indicates that the memory map will not map a file init 
+</span><span style="color:#008000"></span>    MAP_PRIVATE | MAP_ANONYMOUS,
+    
+    <span style="color:#008000">// File Descriptor
+</span><span style="color:#008000"></span>    <span style="color:#008000">// Since we Map Anonymous, this value is required to be -1
+</span><span style="color:#008000"></span>    <span style="color:#008000">// Some implementations ignore this value while others required it to be -1
+</span><span style="color:#008000"></span>    -1,
+    
+    <span style="color:#008000">// Offset 
+</span><span style="color:#008000"></span>    0
+);
+
+<span style="color:#008000">// Copy the opcodes into the memory map 
+</span><span style="color:#008000"></span>memcpy(ptr, &amp;shc, <span style="color:#00f">sizeof</span>(shc));</code></pre></div>
+<p>Almost there, now we have our memory map that has the executable permission set and we have also copied the <code>shc</code> array that contains the opcodes into the memory map. All that remains is now to jump to it. Now this can be done in two ways, one with function pointer and other with inline assembly.</p>
+
+<h3 id="using-function-pointers">Using Function Pointers</h3>
+
+<p>Our assembler code takes in one parameter of type <code>integer</code> and <code>return</code>s one <code>integer</code>. Following is its function signation</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C" data-lang="C">// <span style="color:#2b91af">int</span> func(<span style="color:#2b91af">int</span>);</code></pre></div>
+<p>But we need to convert our <code>void*</code> that points to the <code>mmap</code> region to a function pointer and that can done by defingin a function pointer</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C" data-lang="C"><span style="color:#00f">typedef</span> int (*func)(<span style="color:#2b91af">int</span>);</code></pre></div>
+<p>and assign <code>*func</code> to the <code>void*</code></p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C" data-lang="C">func f = ptr;
+f(<span style="color:#008000">/* some integer value */</span> 4);</code></pre></div>
+<h3 id="using-inline-assembly">Using Inline Assembly</h3>
+
+<p>Using inline assembly we will first need to supply a value in <code>rdi</code> since rdi according the System V abi holds the first parameter passed to a function. We then need to load the memory location into r</p>
+
+<h4 id="source">source</h4>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C" data-lang="C"><span style="color:#00f">#include</span> <span style="color:#00f">&lt;stdio.h&gt;</span><span style="color:#00f">
+</span><span style="color:#00f">#include</span> <span style="color:#00f">&lt;string.h&gt;</span><span style="color:#00f">
+</span><span style="color:#00f">#include</span> <span style="color:#00f">&lt;sys/mman.h&gt;</span><span style="color:#00f">
+</span><span style="color:#00f"></span>
+<span style="color:#00f">typedef</span> int (*FuncPtr)(<span style="color:#2b91af">int</span>);
+
+<span style="color:#2b91af">unsigned</span> <span style="color:#2b91af">char</span> code[] = {
+    0x48, 0x89, 0xf8,
+    0x48, 0x83, 0xc0, 0x04,
+    0xc3 
+};
+
+<span style="color:#2b91af">int</span> main(<span style="color:#2b91af">int</span> argc, <span style="color:#2b91af">char</span> **argv) {
+    <span style="color:#2b91af">void</span> *ptr = mmap(NULL, <span style="color:#00f">sizeof</span>(code), PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    <span style="color:#00f">if</span>(ptr == (<span style="color:#2b91af">void</span>*) -1) {
+        printf(<span style="color:#a31515">&#34;Unable to map</span><span style="color:#a31515">\n</span><span style="color:#a31515">&#34;</span>);
+        <span style="color:#00f">return</span> -1;
+    }
+    memcpy(ptr, code, <span style="color:#00f">sizeof</span>(code));
+    FuncPtr f = ptr;
+    printf(<span style="color:#a31515">&#34;%d</span><span style="color:#a31515">\n</span><span style="color:#a31515">&#34;</span>, f(4));
+    munmap(ptr, <span style="color:#00f">sizeof</span>(code));
+    <span style="color:#00f">return</span> 0;
+}</code></pre></div>
+		</div></div>
+	<div class="footer wrapper">
+	<nav class="nav">
+		<div><a href="https://github.com/vividvilla/ezhil">Ezhil theme</a> | Built with <a href="https://gohugo.io">Hugo</a></div>
+	</nav>
+</div>
+
+<script>feather.replace()</script>
+</body>
+</html>
