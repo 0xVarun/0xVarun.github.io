@@ -1,24 +1,24 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://vtewari.com/posts/</loc>
+    <loc>https://0xvarun.github.io/posts/</loc>
     <lastmod>2019-09-29T13:44:23+05:30</lastmod>
   </url>
   
   <url>
-    <loc>https://vtewari.com/posts/unpacking-and-running-code-at-runtime/</loc>
+    <loc>https://0xvarun.github.io/posts/unpacking-and-running-code-at-runtime/</loc>
     <lastmod>2019-09-29T13:44:23+05:30</lastmod>
   </url>
   
   <url>
-    <loc>https://vtewari.com/</loc>
+    <loc>https://0xvarun.github.io/</loc>
     <lastmod>2019-09-29T13:44:23+05:30</lastmod>
   </url>
   
   <url>
-    <loc>https://vtewari.com/tags/</loc>
+    <loc>https://0xvarun.github.io/tags/</loc>
   </url>
   
 </urlset>
