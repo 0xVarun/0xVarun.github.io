@@ -4,20 +4,18 @@
 	<meta charset="utf-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Unpacking and Running Code at Runtime - Yet Another Tech Blog!!</title><meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta property="og:title" content="Unpacking and Running Code at Runtime" />
-<meta property="og:description" content="The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use how ever this chunk is not executable.
-as you can see in the above image ." />
+<meta property="og:description" content="The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use. However this all pages in this chunk are marked as non executable." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://0xvarun.github.io/posts/unpacking-and-running-code-at-runtime/" />
+<meta property="og:url" content="https://vtewari.com/posts/unpacking-and-running-code-at-runtime/" />
 <meta property="article:published_time" content="2019-09-29T13:44:23+05:30" />
 <meta property="article:modified_time" content="2019-09-29T13:44:23+05:30" />
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Unpacking and Running Code at Runtime"/>
-<meta name="twitter:description" content="The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use how ever this chunk is not executable.
-as you can see in the above image ."/>
+<meta name="twitter:description" content="The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use. However this all pages in this chunk are marked as non executable."/>
 <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,300italic,400italic|Raleway:500,100,300" rel="stylesheet">
 
-	<link rel="stylesheet" type="text/css" media="screen" href="https://0xvarun.github.io/css/normalize.css" />
-	<link rel="stylesheet" type="text/css" media="screen" href="https://0xvarun.github.io/css/main.css" /><script src="https://0xvarun.github.io/js/feather.min.js"></script><script src="https://0xvarun.github.io/js/main.js"></script>
+	<link rel="stylesheet" type="text/css" media="screen" href="https://vtewari.com/css/normalize.css" />
+	<link rel="stylesheet" type="text/css" media="screen" href="https://vtewari.com/css/main.css" /><script src="https://vtewari.com/js/feather.min.js"></script><script src="https://vtewari.com/js/main.js"></script>
 </head>
 
 <body>
@@ -45,7 +43,7 @@ as you can see in the above image ."/>
 		<div class="markdown">
 			
 
-<p>The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use how ever this chunk is not executable.</p>
+<p>The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use. However this all pages in this chunk are marked as non executable.</p>
 
 <p><img src="/heap_no_x.png" alt="Non Executable Heap" /></p>
 
@@ -81,7 +79,7 @@ Disassembly of section .text:
   401000:	48 89 f8             	mov    rax,rdi
   401003:	48 83 c0 04          	add    rax,0x4
   401007:	c3                   	ret    </code></pre></div>
-<p>alternatively you could also use you could also use <code>rasm2</code> for this.</p>
+<p>alternatively you could you could also use <code>rasm2</code> for this.</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ rasm2 -a x86 -b 64  <span style="color:#a31515">&#39;mov rax, rdi; add rax, 0x4; ret&#39;</span>
 4889f84883c004c3</code></pre></div>
 <p>The opcodes now can be loaded into memroy and we can jump to that memory location and start executing but for that we first need to setup mmap</p>
@@ -117,7 +115,7 @@ Disassembly of section .text:
 
 <span style="color:#008000">// Copy the opcodes into the memory map 
 </span><span style="color:#008000"></span>memcpy(ptr, &amp;shc, <span style="color:#00f">sizeof</span>(shc));</code></pre></div>
-<p>Almost there, now we have our memory map that has the executable permission set and we have also copied the <code>shc</code> array that contains the opcodes into the memory map. All that remains is now to jump to it. Now this can be done in two ways, one with function pointer and other with inline assembly.</p>
+<p>Almost there, now we have our memory map that has the executable permission set and we have also copied the <code>shc</code> array that contains the opcodes into the memory map. All that remains is now to jump to it. Now this can be done easily with function pointers.</p>
 
 <h3 id="using-function-pointers">Using Function Pointers</h3>
 
@@ -128,10 +126,6 @@ Disassembly of section .text:
 <p>and assign <code>*func</code> to the <code>void*</code></p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C" data-lang="C">func f = ptr;
 f(<span style="color:#008000">/* some integer value */</span> 4);</code></pre></div>
-<h3 id="using-inline-assembly">Using Inline Assembly</h3>
-
-<p>Using inline assembly we will first need to supply a value in <code>rdi</code> since rdi according the System V abi holds the first parameter passed to a function. We then need to load the memory location into r</p>
-
 <h4 id="source">source</h4>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C" data-lang="C"><span style="color:#00f">#include</span> <span style="color:#00f">&lt;stdio.h&gt;</span><span style="color:#00f">
 </span><span style="color:#00f">#include</span> <span style="color:#00f">&lt;string.h&gt;</span><span style="color:#00f">
