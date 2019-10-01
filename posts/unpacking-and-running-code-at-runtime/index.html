@@ -59,7 +59,7 @@
 		<div class="markdown">
 			
 
-<p>The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use. However this all pages in this chunk are marked as non executable.</p>
+<p>The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use. However all these pages in this chunk are marked as non executable.</p>
 
 <p><img src="/heap_no_x.png" alt="Non Executable Heap" /></p>
 
