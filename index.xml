@@ -6,7 +6,7 @@
     <description>Recent content on Yet Another Tech Blog!!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 29 Sep 2019 13:44:23 +0530</lastBuildDate>
+    <lastBuildDate>Tue, 10 Mar 2020 13:44:23 +0530</lastBuildDate>
     
 	<atom:link href="https://vtewari.com/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,10 +14,11 @@
     <item>
       <title>Unpacking and Running Code at Runtime</title>
       <link>https://vtewari.com/posts/unpacking-and-running-code-at-runtime/</link>
-      <pubDate>Sun, 29 Sep 2019 13:44:23 +0530</pubDate>
+      <pubDate>Tue, 10 Mar 2020 13:44:23 +0530</pubDate>
       
       <guid>https://vtewari.com/posts/unpacking-and-running-code-at-runtime/</guid>
-      <description>The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use. However this all pages in this chunk are marked as non executable.</description>
+      <description>The idea is to pack the opcodes in the source code as an array which are then copied into memory and the code can start executing from that locations. Simple enough, but, the usual way of creating memory on the heap is done using the malloc library call gives you a chunk of memory you can use. However this all pages in this chunk are marked as non executable.
+as you can see in the above image .</description>
     </item>
     
   </channel>
